@@ -17,6 +17,10 @@ class User(AbstractBaseUser,PermissionsMixin):
         PENDING ='pending','Pending'
         VERIFIED ='verified', 'Verified'
         REJECTED = 'rejected','rejected'
+    
+    class Gender(models.TextChoices):
+        MALE = 'male','Male'
+        FEMALE ='female','Female'
 
     phone_number = models.CharField(unique=True,max_lenght=20)
     email = models.EmailField(blank=True)
@@ -28,8 +32,8 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 
     is_phone_verified = models.BooleanField(default=False)
-    registration_step = models.CharField(max_length=20,choices=RegistrationStep,default=RegistrationStep.PHONE_OTP)
-    verfication_status = models.CharField(max_lenght=20,choices=VerificationStatus,default=VerificationStatus.PENDING)
+    registration_step = models.CharField(max_length=20,choices=RegistrationStep.choices,default=RegistrationStep.PHONE_OTP)
+    verfication_status = models.CharField(max_lenght=20,choices=VerificationStatus.choices,default=VerificationStatus.PENDING)
 
     national_id_number = models.CharField(max_length=50,blank=True,unique=True)
     id_card_photo = models.ImageField(upload_to='id_cards/',blank=True,null=True)
@@ -37,10 +41,28 @@ class User(AbstractBaseUser,PermissionsMixin):
     date_of_birth = models.DateField(blank=True)
     rejection_reason = models.TextField(blank=True)
 
+    gender = models.charField(max_length=20, choices=Gender.choices,blank=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/',blank=True)
+
+    emergency_contact_name = models.CharField(max_length=255,blank=True)
+    emergency_contact_phone = models.CharField(max_length=20,blank=True)
+
+    is_driver = models.BooleanField(default=False)
+
+    driver_verification_status = models.CharField(max_length=20,choices=VerificationStatus.choices,default=VerificationStatus.PENDING,blank=True,null=True)
+    
+    total_rides_as_driver = models.PositiveIntegerField(default=0)
+    total_rides_as_passenger = models.PositiveIntegerField(default=0)
+
+    trust_score = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
+
     obejects = UserManager()
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
+
+    class Meta:
+        db_table = 'users'
 
     def __str__(self):
         return f"{self.full_name} ({self.phone_number})"
