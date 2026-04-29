@@ -132,6 +132,15 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+OTP_BACKEND = 'email'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'mugishalain81@gmail.com'
+
+# Africa's Talking credentials — fill in at launch
+# AT_USERNAME  = ''                                                                                                                                                                  
+# AT_API_KEY   = ''
+# AT_SENDER_ID = 'TRUENORTH RIDES' 
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 

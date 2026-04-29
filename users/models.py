@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import UserManager
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 # Create your models here.
 
 
@@ -22,7 +25,7 @@ class User(AbstractBaseUser,PermissionsMixin):
         MALE = 'male','Male'
         FEMALE ='female','Female'
 
-    phone_number = models.CharField(unique=True,max_lenght=20)
+    phone_number = models.CharField(unique=True,max_length=20)
     email = models.EmailField(blank=True)
     full_name = models.CharField(blank=False,max_length=255)
 
@@ -33,7 +36,7 @@ class User(AbstractBaseUser,PermissionsMixin):
 
     is_phone_verified = models.BooleanField(default=False)
     registration_step = models.CharField(max_length=20,choices=RegistrationStep.choices,default=RegistrationStep.PHONE_OTP)
-    verfication_status = models.CharField(max_lenght=20,choices=VerificationStatus.choices,default=VerificationStatus.PENDING)
+    verfication_status = models.CharField(max_length=20,choices=VerificationStatus.choices,default=VerificationStatus.PENDING)
 
     national_id_number = models.CharField(max_length=50,blank=True,unique=True)
     id_card_photo = models.ImageField(upload_to='id_cards/',blank=True,null=True)
@@ -41,7 +44,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     date_of_birth = models.DateField(blank=True)
     rejection_reason = models.TextField(blank=True)
 
-    gender = models.charField(max_length=20, choices=Gender.choices,blank=True)
+    gender = models.CharField(max_length=20, choices=Gender.choices,blank=True)
     profile_photo = models.ImageField(upload_to='profile_photos/',blank=True)
 
     emergency_contact_name = models.CharField(max_length=255,blank=True)
@@ -66,4 +69,19 @@ class User(AbstractBaseUser,PermissionsMixin):
 
     def __str__(self):
         return f"{self.full_name} ({self.phone_number})"
+
+class OTPCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name='otp_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'otp_codes'
     
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+
+    def __str__(self):
+        return f"OTP for {self.user.phone_number} - Code: {self.code}"
