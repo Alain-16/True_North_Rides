@@ -1,5 +1,7 @@
 from django.conf import settings
 from rest_framework import serializers
+from django.utils import timezone
+from .models import User
 
 
 class RequestOtpSerializer(serializers.Serializer):
@@ -23,3 +25,39 @@ class RequestOtpSerializer(serializers.Serializer):
 class verifyOtpSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     code = serializers.CharField(max_length=6)
+
+class UserProfileSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(required=False,allow_blank=True)
+    date_of_birth = serializers.DateField(required=True)
+    emergency_contact_name = serializers.CharField(max_length=255,required=True)
+    emergency_contact_phone = serializers.CharField(max_length=20,required=True)
+
+    def validate_emergency_contact_phone(self,value):
+        if not value.startswith('+'):
+            raise serializers.ValidationError("Emergency contact phone number must include country code, e.g. +250788123456")
+        if not value[1:].isdigit():
+            raise serializers.ValidationError("Emergency contact phone number must contain only digits after the country code")
+        return value
+    
+    def validate_date_of_birth(self,value):
+        today = timezone.now().date()
+        
+        if value >= today:
+            raise serializers.ValidationError("Date of birth cannot be in the future")
+        age =(today - value).days
+        if age < 18:
+            raise serializers.ValidationError("User must be at least 18 years old")
+        return value
+    
+    def save(self,user):
+        data = self.validated_data
+        user.full_name = data['full_name']
+        user.email = data.get('email',user.email)
+        user.date_of_birth = data['date_of_birth']
+        user.gender = data['gender']
+        user.emergency_contact_name = data['emergency_contact_name']
+        user.emergency_contact_phone = data['emergency_contact_phone']
+        user.registration_step = User.RegistrationStep.ID_VERiFICATION
+        user.save(update_fields=['full_name','email','date_of_birth','gender','emergency_contact_name','emergency_contact_phone','registration_step'])
+        

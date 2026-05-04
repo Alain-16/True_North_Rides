@@ -2,8 +2,8 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from .serializers import RequestOtpSerializer,verifyOtpSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import RequestOtpSerializer,verifyOtpSerializer,UserProfileSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import OTPCode, User
 from .services import generate_otp, send_otp
@@ -15,7 +15,7 @@ class RequestOtpView(APIView):
     def post(self,request):
         serializer = RequestOtpSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,status=status.HTTP_100_CONTINUE)
+            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
         phone_number = serializer.validated_data['phone_number']
         email = serializer.validated_data.get('email','')
 
@@ -81,5 +81,24 @@ class verifyOtpView(APIView):
             },
             status = status.HTTP_200_OK
 
+        )
+
+class completeProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        user = request.user
+        if user.registration_step != User.RegistrationStep.PROFILE:
+            return Response({"detail":"Profile already completed"},status=status.HTTP_400_BAD_REQUEST)
+        serializer = UserProfileSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(user=user)
+        return Response({
+            "Detail":"Profile completed successfully",
+            "registration_step":user.registration_step,
+
+        },
+        status=status.HTTP_200_OK
         )
 

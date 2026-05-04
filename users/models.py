@@ -24,6 +24,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     class Gender(models.TextChoices):
         MALE = 'male','Male'
         FEMALE ='female','Female'
+        PREFER_NOT_TO_SAY = 'prefer_not_to_say','Prefer not to say'
 
     phone_number = models.CharField(unique=True,max_length=20)
     email = models.EmailField(blank=True)
@@ -59,7 +60,7 @@ class User(AbstractBaseUser,PermissionsMixin):
 
     trust_score = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
 
-    obejects = UserManager()
+    objects = UserManager()
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
