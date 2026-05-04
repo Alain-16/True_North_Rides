@@ -3,11 +3,11 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import RequestOtpSerializer,verifyOtpSerializer,UserProfileSerializer
+from .serializers import RequestOtpSerializer,verifyOtpSerializer,UserProfileSerializer,IDVerificationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import OTPCode, User
 from .services import generate_otp, send_otp
-
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class RequestOtpView(APIView):
     permission_classes = [AllowAny]
@@ -102,3 +102,27 @@ class completeProfileView(APIView):
         status=status.HTTP_200_OK
         )
 
+class IDVerificationView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser,FormParser]
+
+    def post(self,request):
+        user = request.user
+        if user.registration_step != User.RegistrationStep.ID_VERiFICATION:
+            return Response({
+                "Detail":"ID verification already completed"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = IDVerificationSerializer(data={**request.data, **request.FILES})
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer.save(user=user)
+        return Response({
+            "Detail":"ID Verification submitted successfully",
+            "registration step":user.registration_step,
+            "verification status":user.verification_status
+        },
+        status=status.HTTP_200_OK)

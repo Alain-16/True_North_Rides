@@ -60,4 +60,28 @@ class UserProfileSerializer(serializers.Serializer):
         user.emergency_contact_phone = data['emergency_contact_phone']
         user.registration_step = User.RegistrationStep.ID_VERiFICATION
         user.save(update_fields=['full_name','email','date_of_birth','gender','emergency_contact_name','emergency_contact_phone','registration_step'])
-        
+
+
+class IDVerificationSerializer(serializers.Serializer):
+    national_id_number = serializers.CharField(max_length=16)
+    national_id_photo = serializers.ImageField()
+    selfie_photo = serializers.ImageField()
+
+    def validate_national_id_number(self,value):
+        value = value.strip()
+        if len(value) != 16 or not value.isdigit():
+            raise serializers.ValidationError("National ID number must be exactly 16 characters long")
+        if User.objects.filter(national_id_number=value).exists():
+            raise serializers.ValidationError("This national ID number is already in use")
+        return value
+    
+    def save(self,user):
+        data = self.validated_data
+        user.national_id_number = data['national_id_number']
+        user.id_card_photo = data['id_card_photo']
+        user.selfie_photo = data['selfie_photo']
+        user.verification_status = User.VerificationStatus.PENDING
+        user.registration_step = User.RegistrationStep.COMPLETED
+        user.save(update_fields=[
+            'national_id_number','id_card_photo','selfie_photo','verification_status','registration_step'
+        ])
