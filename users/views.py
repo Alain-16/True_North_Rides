@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import RequestOtpSerializer,verifyOtpSerializer,UserProfileSerializer,IDVerificationSerializer
+from .serializers import RequestOtpSerializer,verifyOtpSerializer,UserProfileSerializer,IDVerificationSerializer,DriverRegistrationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import OTPCode, User
 from .services import generate_otp, send_otp
@@ -126,3 +126,30 @@ class IDVerificationView(APIView):
             "verification status":user.verification_status
         },
         status=status.HTTP_200_OK)
+    
+class DriverRegistrationView(APIView):
+    persmission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser,FormParser]
+
+    def post(self,request):
+        user = request.user
+        
+        if user.registration_step != User.RegistrationStep.COMPLETED:
+            return Response({
+                "detail":"complete passenger registration before applying to driver registration"
+            },status=status.HTTP_100_CONTINUE)
+        
+        if user.driver_license_number:
+            return Response({
+                "Detail":"Driver registration already completed"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = DriverRegistrationSerializer(data={**request.data, **request.FILES})
+        if not serializer.is_valid():
+            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(user=user)
+
+        return Response({
+            "Detail":"Driver registration submitted successfully, you will notificed once your application has been reviewed",
+            "driver_verification_status":user.driver_verification_status
+        }, status=status.HTTP_200_OK)

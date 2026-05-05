@@ -25,6 +25,16 @@ class User(AbstractBaseUser,PermissionsMixin):
         MALE = 'male','Male'
         FEMALE ='female','Female'
         PREFER_NOT_TO_SAY = 'prefer_not_to_say','Prefer not to say'
+    
+    class FuelType(models.TextChoices):
+        PETROL = 'petrol','petrol'
+        DIESEL = 'diesel','diesel'
+        ELECTRIC = 'electric','electric'
+    class EfficiencySource(models.TextChoices):                                                                                                                                      
+        FUELECONOMY_API = 'fueleconomy_api', 'FuelEconomy API'
+        ENGINE_SIZE_FALLBACK = 'engine_size_fallback', 'Engine Size Fallback'                                                                                                        
+        MANUAL_ENTRY = 'manual_entry', 'Manual Entry'
+
 
     phone_number = models.CharField(unique=True,max_length=20)
     email = models.EmailField(blank=True)
@@ -60,6 +70,30 @@ class User(AbstractBaseUser,PermissionsMixin):
 
     trust_score = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
 
+    driver_license_number = models.CharField(max_length=50,blank=True, unique=True)
+    driver_license_expiry_date = models.DateField(null=True,blank=True)
+    driver_license_photo = models.ImageField(upload_to='driver_licenses/',blank=True,null=True)
+
+    vehicle_make = models.CharField(max_length=20,blank=True)
+    vehicle_model = models.CharField(max_length=20,blank=True)
+    vehicle_year = models.PositiveIntegerField(null=True,blank=True)
+    vehicle_fuel_type = models.CharField(max_length=20,blank=True,choices=FuelType.choices)
+    vehicle_engine_cc = models.PositiveIntegerField(null=True, blank=True)                                                                                                           
+    vehicle_color = models.CharField(max_length=50, blank=True)
+    vehicle_plate = models.CharField(max_length=20, blank=True)
+    vehicle_registration_photo = models.ImageField(
+          upload_to='vehicle_registrations/', blank=True, null=True
+      )                                                                                                                                                                                
+    vehicle_photo = models.ImageField(
+          upload_to='vehicle_photos/', blank=True, null=True                                                                                                                           
+      )
+
+    vehicle_system_efficiency_km_l = models.DecimalField(max_digits=5, decimal_places=2,null=True,blank=True)
+    vehicle_driver_adjusted_efficiency_km_l = models.DecimalField(max_digits=5, decimal_places=2,null=True,blank=True)
+    vehicle_effective_efficiency_km_l = models.DecimalField(max_digits=5, decimal_places=2,null=True,blank=True)
+    vehicle_efficiency_source = models.CharField(max_length=20,choices=EfficiencySource.choices,blank=True,null=True)   
+
+
     objects = UserManager()
 
     USERNAME_FIELD = 'phone_number'
@@ -86,3 +120,23 @@ class OTPCode(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.phone_number} - Code: {self.code}"
+    
+class VehicleEfficiencyCache(models.Model):
+    make = models.CharField(max_length=100)
+    model = models.CharField(max_length=100)
+    year = models.PositiveIntegerField()
+    fuel_type = models.CharField(max_length=20,choices=User.FuelType.choices)
+    api_mpg_combined = models.DecimalField(max_digits=5,decimal_places=2,null=True,blank=True)
+    base_efficiency_km_l = models.DecimalField(max_digits=5,decimal_places=2,null=True,blank=True)
+    adjusted_efficiency_km_l = models.DecimalField(max_digits=5,decimal_places=2,null=True,blank=True)
+    data_source = models.CharField(max_length=20,choices=User.EfficiencySource.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        db_table ='vehicle_efficiency_cache'
+        unique_together =('make','model','year','fuel_type')
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
